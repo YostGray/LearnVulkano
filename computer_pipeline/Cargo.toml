@@ -1,0 +1,9 @@
+[package]
+name = "computer_pipeline"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+vulkano = {workspace = true}
+vulkano-shaders = {workspace = true}
+image = {workspace = true}

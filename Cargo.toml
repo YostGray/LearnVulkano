@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = [
+    "computer_pipeline"
+]
+
+[workspace.dependencies]
+vulkano = "0.34.0"
+# Notice that it uses the same version as vulkano
+vulkano-shaders = "0.34.0"
+image = "0.24"
+
+# [profile.dev]
+# opt-level = 1 
