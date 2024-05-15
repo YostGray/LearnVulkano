@@ -12,20 +12,21 @@ layout(set = 0, binding = 0) buffer Data {
 
 layout(set = 0, binding = 1, rgba8) uniform writeonly image2D img;
 
-// //from https://www.shadertoy.com/view/ltB3zD
-// const float PHI = 1.61803398874989484820459;
-// float gold_noise(float seed, vec2 pos)
-// {
-//     return fract(tan(distance(pos*PHI, pos) * seed)*pos.x);
-// }
+//from https://www.shadertoy.com/view/ltB3zD
+const float PHI = 1.61803398874989484820459;
+float gold_noise(float seed, vec2 pos)
+{
+    //n 0..1
+    float n = fract(tan(distance(pos*PHI, pos) * seed) * pos.x);
+    return n * 2 - 1;
+}
 
-// vec2 get_random_grade(float seed, vec2 pos)
-// {
-//     float x = gold_noise(seed,pos);
-//     float y = gold_noise(seed + 0.5,pos);
-//     vec2 v = vec2(x,y);
-//     return v / length(v);
-// }
+vec2 get_random_grade(float seed, vec2 pos)
+{
+    float x = gold_noise(seed, pos);
+    float y = gold_noise(seed + 0.5, pos);
+    return normalize(vec2(x,y));
+}
 
 // const int BIT_NOISE1 = 0x85297A4D;
 // const int BIT_NOISE2 = 0x68E31DA4;
@@ -55,14 +56,14 @@ layout(set = 0, binding = 1, rgba8) uniform writeonly image2D img;
 //     return v / length(v);
 // }
 
-vec2 rand_value_22(uint seed, vec2 pos)
-{
-    float x = length(pos) + 58.12 + 79.52 * float(seed);
-    float y = length(pos) + 96.53 + 36.95 * float(seed);
-    x = sin(x);
-    y = sin(y);
-    return normalize(vec2(x,y));
-} 
+// vec2 rand_value_22(float seed, vec2 pos)
+// {
+//     float x = length(pos) + 58.12 + 79.52 * seed;
+//     float y = length(pos) + 96.53 + 36.95 * seed;
+//     x = sin(x);
+//     y = sin(y);
+//     return normalize(vec2(x,y));
+// } 
 
 float perline_noise_lerp(float a,float b,float t)
 {
@@ -72,37 +73,48 @@ float perline_noise_lerp(float a,float b,float t)
 
 void main() {
     vec2 pos = vec2(gl_GlobalInvocationID.xy);
-    uint block_size = buf.size / buf.frequency;
+    // uint block_size = buf.size / buf.frequency;
 
-    //p0 p3
-    //p1 p2
-    vec2 p0 = pos - mod(pos, block_size);
-    vec2 p2 = p0 + vec2(block_size, block_size);
-    vec2 p1 = vec2(p0.x, p2.y);
-    vec2 p3 = vec2(p2.x, p0.y);
+    float result = 0;
+    for(int fbm = 0; fbm < buf.fbm_time; fbm++)
+    {
+        float frequency = buf.frequency * pow(2,fbm);
+        float block_size = buf.size / frequency;
+        float seed = buf.seed + fbm;
 
-    vec2 dir_P0 = (pos - p0) / block_size;
-    vec2 dir_P1 = (pos - p1) / block_size;
-    vec2 dir_P2 = (pos - p2) / block_size;
-    vec2 dir_P3 = (pos - p3) / block_size;
+        vec2 p0 = pos - mod(pos, block_size);
+        vec2 p2 = p0 + vec2(block_size, block_size);
+        vec2 p1 = vec2(p0.x, p2.y);
+        vec2 p3 = vec2(p2.x, p0.y);
 
-    vec2 grade_P0 = rand_value_22(buf.seed, p0);
-    vec2 grade_P1 = rand_value_22(buf.seed, p1);
-    vec2 grade_P2 = rand_value_22(buf.seed, p2);
-    vec2 grade_P3 = rand_value_22(buf.seed, p3);
+        vec2 dir_P0 = (pos - p0) / block_size;
+        vec2 dir_P1 = (pos - p1) / block_size;
+        vec2 dir_P2 = (pos - p2) / block_size;
+        vec2 dir_P3 = (pos - p3) / block_size;
 
-    float v0 = dot(grade_P0, dir_P0);
-    float v1 = dot(grade_P1, dir_P1);
-    float v2 = dot(grade_P2, dir_P2);
-    float v3 = dot(grade_P3, dir_P3);
+        vec2 grade_P0 = get_random_grade(seed, p0);
+        vec2 grade_P1 = get_random_grade(seed, p1);
+        vec2 grade_P2 = get_random_grade(seed, p2);
+        vec2 grade_P3 = get_random_grade(seed, p3);
 
-    vec2 t = dir_P0;
-    float v = perline_noise_lerp (
-        perline_noise_lerp(v0,v3,t.x),
-        perline_noise_lerp(v1,v2,t.x),
-        t.y
-    );
-    v = (v + 1.0) / 2.0;
-    vec4 to_write = vec4(v, v, v, 1.0);
+        float v0 = dot(grade_P0, dir_P0);
+        float v1 = dot(grade_P1, dir_P1);
+        float v2 = dot(grade_P2, dir_P2);
+        float v3 = dot(grade_P3, dir_P3);
+
+        vec2 t = dir_P0;
+        float v = perline_noise_lerp (
+            perline_noise_lerp(v0,v3,t.x),
+            perline_noise_lerp(v1,v2,t.x),
+            t.y
+        );
+        float scale = pow(0.5,fbm);
+        result += v * scale;
+
+        // vec4 to_write = vec4((grade_P2 * 2) - vec2(1,1), 0, 1.0);
+        // imageStore(img, ivec2(gl_GlobalInvocationID.xy), to_write);
+    }
+    result = (result + 1.0) / 2.0;
+    vec4 to_write = vec4(result, result, result, 1.0);
     imageStore(img, ivec2(gl_GlobalInvocationID.xy), to_write);
 }

@@ -79,13 +79,13 @@ mod cs {
 fn gen_noise(state: &State){
     let memory_allocator = Arc::new(StandardMemoryAllocator::new_default(state.device.clone()));
     
-    let size = 128;
+    let size = 512;
 
     let input_data = GenNoiseInput{
-        seed: 514,
+        seed: 929,
         size,
         frequency: 8,
-        fbm_time: 1,
+        fbm_time: 4,
     };
     let input_buffer = Buffer::from_data(
         memory_allocator.clone(),
@@ -212,7 +212,7 @@ fn gen_noise(state: &State){
 
     let buffer_content = output_buffer.read().unwrap();
     let image = ImageBuffer::<Rgba<u8>, _>::from_raw(size, size, &buffer_content[..]).unwrap();
-    image.save("out/noise.png").unwrap();
+    image.save("out/fbm_noise.png").unwrap();
 
     println!("Everything succeeded!");
 }
