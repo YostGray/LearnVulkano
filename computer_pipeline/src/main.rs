@@ -84,8 +84,8 @@ fn gen_noise(state: &State){
     let input_data = GenNoiseInput{
         seed: 9709,
         size,
-        frequency: 8,
-        fbm_time: 4,
+        frequency: 32,
+        fbm_time: 3,
     };
     let input_buffer = Buffer::from_data(
         memory_allocator.clone(),

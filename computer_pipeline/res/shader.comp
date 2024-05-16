@@ -22,6 +22,7 @@ float gold_noise(float seed, vec2 pos)
 
 vec2 get_random_grade(float seed, vec2 pos)
 {
+    //it just works
     seed /= 24371;
     pos += vec2(0.5,0.5);
     float x = gold_noise(seed, pos);
@@ -40,10 +41,11 @@ void main() {
     // uint block_size = buf.size / buf.frequency;
 
     float result = 0;
+    float totalScale = 0;
     for(int fbm = 0; fbm < buf.fbm_time; fbm++)
     {
-        float frequency = buf.frequency * pow(2,fbm);
-        float block_size = buf.size / frequency;
+        float frequency = buf.frequency / pow(2,fbm);
+        float block_size = frequency;
         float seed = buf.seed + fbm;
 
         vec2 p0 = pos - mod(pos, block_size);
@@ -74,11 +76,11 @@ void main() {
         );
         float scale = pow(0.5,fbm);
         result += v * scale;
-
+        totalScale += scale;
         // vec4 to_write = vec4((grade_P0 + vec2(1,1))/2, 0, 1.0);
         // imageStore(img, ivec2(gl_GlobalInvocationID.xy), to_write);
     }
-    result = (result + 1.0) / 2.0;
+    result = (result / totalScale + 1.0) / 2.0;
     vec4 to_write = vec4(result, result, result, 1.0);
     imageStore(img, ivec2(gl_GlobalInvocationID.xy), to_write);
 }
